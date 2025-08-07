@@ -2,6 +2,7 @@ const express=require('express');
 const router=express.Router();
 const User=require('./../models/user');
 const sendOtp=require('./../utils/sendOtp');
+const Vote=require('./../models/vote');
 router.post('/signup', async(req, res)=>{
     try{
         const {username, email, password}=req.body;
@@ -41,6 +42,23 @@ router.post('/verify-otp', async(req, res)=>{
     }
     else{
         return res.status(500).json({err: 'Inavlid or Expired OTP'});
+    }
+});
+router.get('/result', async(req, res)=>{
+    try{
+        const result= await Vote.aggregate([
+            {
+                $group:{
+                    _id:"$option",
+                    count:{$sum:1} 
+                }
+            }
+        ]);
+        res.status(200).json(result);
+    }
+    catch(err){
+        console.log('Error Occured ', err);
+        res.status(500).json({err: "Error while fetching result"});
     }
 })
 module.exports=router;
