@@ -3,17 +3,48 @@ const router=express.Router();
 const User=require('./../models/user');
 const sendOtp=require('./../utils/sendOtp');
 const Vote=require('./../models/vote');
+const bcrypt=require('bcrypt');
+const jwt=require('jsonwebtoken');
+const authenticateUser=require('./../auth');
 router.post('/signup', async(req, res)=>{
     try{
-        const {username, email, password}=req.body;
+        const {username, email, password, role}=req.body;
         const existingUser=await User.findOne({email});
         if(existingUser){
             return res.status(400).json({meassage: 'User already exists with this email'});
         }
-        
+          const newUser = new User({
+            username,
+            email,
+            password, 
+            role: role || 'user' 
+        });
         await newUser.save();
        
         res.status(200).json({message: 'SignUp Successfull'});
+    }
+    catch(err){
+        console.log('Error Occured ', err);
+        res.status(500).json({err: 'Internal Server Error'});
+    }
+});
+router.post('/login',async (req, res)=>{
+    const {email, password}=req.body;
+    try{
+        const isUser= await User.findOne({email});
+        if(!isUser){
+            return res.status(401).json({message: 'Email not found'});
+        }
+        const isMatch= await bcrypt.compare(password, isUser.password);
+        if(!isMatch){
+            return res.status(401).json({message: 'Incorrect Password '});
+        }
+        const token=jwt.sign(
+            {userId:user._id, email:user.email},
+            process.env.JWT_SECRET,
+            {expiresIn:process.env.JWT_EXPIRES_IN}
+        );
+        res.status(200).json({message: 'Login Successfull', token});
     }
     catch(err){
         console.log('Error Occured ', err);
